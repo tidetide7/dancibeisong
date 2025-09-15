@@ -1,16 +1,94 @@
 /* 单词勇者自定义样式 */
 
+/* 游戏主题色彩 */
+:root {
+    --primary-blue: #3b82f6;
+    --primary-blue-dark: #2563eb;
+    --secondary-orange: #f59e0b;
+    --secondary-orange-dark: #d97706;
+    --success-green: #10b981;
+    --error-red: #ef4444;
+    --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --card-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    --card-shadow-hover: 0 15px 35px rgba(0, 0, 0, 0.15);
+}
+
+/* 游戏背景 */
+body {
+    background: var(--bg-gradient);
+    background-attachment: fixed;
+}
+
 .screen {
     transition: all 0.3s ease-in-out;
 }
 
+/* 主界面美化 */
+.main-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    box-shadow: var(--card-shadow);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.game-header {
+    background: linear-gradient(45deg, var(--primary-blue), var(--secondary-orange));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
 /* 关卡网格样式 */
+.level-grid-container {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    box-shadow: var(--card-shadow);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
 .level-button {
     transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
 }
 
 .level-button:hover {
     transform: scale(1.05);
+    box-shadow: var(--card-shadow-hover);
+}
+
+/* 已完成关卡样式 */
+.level-completed {
+    background: linear-gradient(135deg, var(--success-green), #059669) !important;
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+}
+
+/* 可玩关卡样式 */
+.level-available {
+    background: linear-gradient(135deg, var(--primary-blue), var(--primary-blue-dark)) !important;
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+}
+
+.level-available::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    animation: shimmer 2s infinite;
+}
+
+/* 锁定关卡样式 */
+.level-locked {
+    background: linear-gradient(135deg, #e2e8f0, #cbd5e1) !important;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+@keyframes shimmer {
+    0% { left: -100%; }
+    100% { left: 100%; }
 }
 
 /* 游戏界面动画 */
@@ -33,6 +111,32 @@
 /* Combo特效 */
 .combo-effect {
     animation: comboGlow 0.8s ease-out;
+}
+
+.combo-effect-2 {
+    animation: comboGlow2 1s ease-out;
+}
+
+.combo-effect-3 {
+    animation: comboGlow3 1.2s ease-out;
+}
+
+.combo-effect-high {
+    animation: comboGlowHigh 1.5s ease-out;
+}
+
+/* 连击提示文字 */
+.combo-text {
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.8rem;
+    font-weight: bold;
+    color: #f59e0b;
+    animation: comboTextFloat 1s ease-out forwards;
+    pointer-events: none;
+    z-index: 10;
 }
 
 /* 生命值动画 */
@@ -79,23 +183,304 @@
     }
 }
 
+@keyframes comboGlow2 {
+    0% {
+        text-shadow: 0 0 5px #f59e0b;
+        transform: scale(1);
+        color: #f59e0b;
+    }
+    25% {
+        text-shadow: 0 0 15px #f59e0b, 0 0 25px #f59e0b;
+        transform: scale(1.15);
+        color: #f97316;
+    }
+    50% {
+        text-shadow: 0 0 25px #f97316, 0 0 35px #f97316, 0 0 45px #f59e0b;
+        transform: scale(1.2);
+        color: #ea580c;
+    }
+    75% {
+        text-shadow: 0 0 20px #f59e0b, 0 0 30px #f59e0b;
+        transform: scale(1.1);
+        color: #f97316;
+    }
+    100% {
+        text-shadow: 0 0 8px #f59e0b;
+        transform: scale(1);
+        color: #f59e0b;
+    }
+}
+
+@keyframes comboGlow3 {
+    0% {
+        text-shadow: 0 0 5px #f59e0b;
+        transform: scale(1) rotate(0deg);
+        color: #f59e0b;
+    }
+    20% {
+        text-shadow: 0 0 20px #f97316, 0 0 30px #f97316;
+        transform: scale(1.2) rotate(2deg);
+        color: #ea580c;
+    }
+    40% {
+        text-shadow: 0 0 30px #ea580c, 0 0 40px #ea580c, 0 0 50px #f59e0b;
+        transform: scale(1.25) rotate(-2deg);
+        color: #dc2626;
+    }
+    60% {
+        text-shadow: 0 0 35px #dc2626, 0 0 45px #dc2626, 0 0 55px #f59e0b;
+        transform: scale(1.3) rotate(1deg);
+        color: #b91c1c;
+    }
+    80% {
+        text-shadow: 0 0 25px #f97316, 0 0 35px #f97316;
+        transform: scale(1.15) rotate(0deg);
+        color: #ea580c;
+    }
+    100% {
+        text-shadow: 0 0 10px #f59e0b;
+        transform: scale(1) rotate(0deg);
+        color: #f59e0b;
+    }
+}
+
+@keyframes comboGlowHigh {
+    0% {
+        text-shadow: 0 0 5px #f59e0b;
+        transform: scale(1) rotate(0deg);
+        color: #f59e0b;
+    }
+    15% {
+        text-shadow: 0 0 25px #f97316, 0 0 35px #f97316;
+        transform: scale(1.3) rotate(5deg);
+        color: #ea580c;
+    }
+    30% {
+        text-shadow: 0 0 40px #ea580c, 0 0 50px #ea580c, 0 0 60px #f59e0b;
+        transform: scale(1.4) rotate(-5deg);
+        color: #dc2626;
+    }
+    45% {
+        text-shadow: 0 0 50px #dc2626, 0 0 60px #dc2626, 0 0 70px #f59e0b;
+        transform: scale(1.5) rotate(3deg);
+        color: #b91c1c;
+    }
+    60% {
+        text-shadow: 0 0 60px #b91c1c, 0 0 70px #b91c1c, 0 0 80px #f59e0b;
+        transform: scale(1.6) rotate(-3deg);
+        color: #991b1b;
+    }
+    75% {
+        text-shadow: 0 0 40px #dc2626, 0 0 50px #dc2626;
+        transform: scale(1.3) rotate(1deg);
+        color: #dc2626;
+    }
+    90% {
+        text-shadow: 0 0 20px #f97316, 0 0 30px #f97316;
+        transform: scale(1.1) rotate(0deg);
+        color: #ea580c;
+    }
+    100% {
+        text-shadow: 0 0 12px #f59e0b;
+        transform: scale(1) rotate(0deg);
+        color: #f59e0b;
+    }
+}
+
+@keyframes comboTextFloat {
+    0% {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+    100% {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-30px);
+    }
+}
+
 @keyframes healthLoss {
     0% { opacity: 1; transform: scale(1); }
     50% { opacity: 0.3; transform: scale(0.8); }
     100% { opacity: 0.3; transform: scale(1); }
 }
 
-/* 响应式设计 */
-@media (max-width: 480px) {
-    #level-grid {
-        gap: 1px;
-    }
+/* 移动端优化 */
+.touch-friendly {
+    min-height: 44px;
+    min-width: 44px;
+}
 
+/* 响应式设计 */
+@media (max-width: 768px) {
+    /* 平板和大屏手机 */
     .level-button {
-        font-size: 0.75rem;
+        min-height: 40px;
+        min-width: 40px;
+        font-size: 0.9rem;
     }
 
     #question-word {
-        font-size: 2.5rem;
+        font-size: 3rem;
+    }
+
+    .combo-text {
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 480px) {
+    /* 小屏手机 */
+    body {
+        font-size: 14px;
+    }
+
+    #level-grid {
+        gap: 2px;
+        padding: 12px;
+    }
+
+    .level-button {
+        min-height: 36px;
+        min-width: 36px;
+        font-size: 0.8rem;
+    }
+
+    #question-word {
+        font-size: 2.2rem;
+        line-height: 1.2;
+    }
+
+    /* 选项按钮更大更容易点击 */
+    #options-container button {
+        padding: 16px;
+        font-size: 1rem;
+        min-height: 60px;
+    }
+
+    /* 播放按钮更大 */
+    #play-audio-btn {
+        font-size: 1.1rem;
+        padding: 12px 20px;
+    }
+
+    /* 生命值图标更大 */
+    #health-display svg {
+        width: 28px;
+        height: 28px;
+    }
+
+    /* Combo显示优化 */
+    #combo-display {
+        font-size: 0.9rem;
+    }
+
+    #combo-count {
+        font-size: 1.3rem;
+    }
+
+    .combo-text {
+        font-size: 0.8rem;
+        top: -15px;
+    }
+
+    /* 错题回顾卡片优化 */
+    .wrong-answer-card {
+        padding: 16px;
+        margin-bottom: 16px;
+    }
+
+    .wrong-answer-card button {
+        padding: 12px 16px;
+        font-size: 0.9rem;
+    }
+
+    /* 结果界面优化 */
+    #result-icon {
+        width: 60px;
+        height: 60px;
+    }
+
+    #result-title {
+        font-size: 1.8rem;
+    }
+}
+
+@media (max-width: 360px) {
+    /* 超小屏手机 */
+    #level-grid {
+        gap: 1px;
+        padding: 8px;
+    }
+
+    .level-button {
+        min-height: 32px;
+        min-width: 32px;
+        font-size: 0.7rem;
+    }
+
+    #question-word {
+        font-size: 1.8rem;
+    }
+
+    #options-container {
+        gap: 8px;
+    }
+
+    #options-container button {
+        padding: 12px;
+        font-size: 0.9rem;
+        min-height: 50px;
+    }
+}
+
+/* 横屏适配 */
+@media (orientation: landscape) and (max-height: 500px) {
+    .min-h-screen {
+        min-height: 100vh;
+    }
+
+    #question-word {
+        font-size: 2rem;
+        margin: 8px 0;
+    }
+
+    #options-container {
+        gap: 8px;
+    }
+
+    #options-container button {
+        padding: 8px 12px;
+        min-height: auto;
+    }
+
+    .wrong-answer-card {
+        padding: 12px;
+        margin-bottom: 8px;
+    }
+}
+
+/* 触摸设备优化 */
+@media (hover: none) and (pointer: coarse) {
+    /* 移除hover效果，避免在触摸设备上的粘性 */
+    .level-button:hover,
+    #options-container button:hover {
+        background-color: inherit;
+    }
+
+    /* 添加活跃状态反馈 */
+    .level-button:active {
+        transform: scale(0.95);
+        transition: transform 0.1s ease;
+    }
+
+    #options-container button:active {
+        transform: scale(0.98);
+        transition: transform 0.1s ease;
+    }
+
+    /* 确保按钮足够大 */
+    button {
+        min-height: 44px;
+        min-width: 44px;
     }
 }

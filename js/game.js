@@ -55,17 +55,20 @@ function renderMainMenu() {
 
         if (level.isCompleted) {
             // 已完成关卡
-            levelButton.className += ' bg-green-500 text-white';
+            levelButton.className += ' level-completed text-white';
             levelButton.innerHTML = '✓';
         } else if (level.isUnlocked) {
             // 可玩关卡
-            levelButton.className += ' bg-blue-500 text-white hover:bg-blue-600 shadow-lg';
+            levelButton.className += ' level-available text-white';
             levelButton.textContent = level.id;
-            levelButton.onclick = () => startLevel(level.id);
+            levelButton.onclick = () => {
+                if (window.audioManager) audioManager.play('click');
+                startLevel(level.id);
+            };
         } else {
             // 锁定关卡
-            levelButton.className += ' bg-slate-200 text-slate-400 cursor-not-allowed';
-            levelButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 2a4 4 0 00-4 4v2H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-1V6a4 4 0 00-4-4zm2 6V6a2 2 0 10-4 0v2h4z" clip-rule="evenodd" /></svg>';
+            levelButton.className += ' level-locked text-slate-500 cursor-not-allowed';
+            levelButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 2a4 4 0 00-4 4v2H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-1V6a4 4 0 00-4-4zm2 6V6a2 2 0 10-4 0v2h4z" clip-rule="evenodd" /></svg>';
         }
 
         levelGrid.appendChild(levelButton);
@@ -111,12 +114,40 @@ function renderGameplay() {
     // 更新生命值
     renderHealthDisplay();
 
-    // 更新题目
-    document.getElementById('question-word').textContent = currentQuestion.word;
-    document.getElementById('question-word').className = 'text-5xl font-bold text-slate-800 question-enter';
+    // 根据题型更新界面
+    const typeIndicator = document.getElementById('question-type-indicator');
+    const questionWord = document.getElementById('question-word');
+    const playAudioBtn = document.getElementById('play-audio-btn');
+
+    if (currentQuestion.type === 'listening') {
+        // 听音选词题型
+        typeIndicator.textContent = '听音选词';
+        questionWord.textContent = '🔊 点击播放发音';
+        questionWord.className = 'text-3xl font-bold text-blue-600 question-enter cursor-pointer';
+        questionWord.onclick = playQuestionAudio;
+        playAudioBtn.classList.remove('hidden');
+
+        // 自动播放一次
+        setTimeout(() => playQuestionAudio(), 500);
+    } else {
+        // 看词选意题型
+        typeIndicator.textContent = '看词选意';
+        questionWord.textContent = currentQuestion.word;
+        questionWord.className = 'text-5xl font-bold text-slate-800 question-enter';
+        questionWord.onclick = null;
+        playAudioBtn.classList.add('hidden');
+    }
 
     // 渲染选项
     renderOptions(currentQuestion);
+}
+
+// 播放题目音频
+function playQuestionAudio() {
+    const currentQuestion = gameState.questions[gameState.currentQuestionIndex];
+    if (currentQuestion && window.audioManager) {
+        audioManager.playWordPronunciation(currentQuestion.word);
+    }
 }
 
 // 渲染生命值
@@ -168,16 +199,27 @@ function selectAnswer(selectedIndex, selectedOption) {
         gameState.combo++;
         gameState.score += 10 * gameState.combo;
 
-        // Combo特效
+        // 播放正确答案音效
+        if (window.audioManager) {
+            audioManager.play('correct');
+            // 连击音效
+            if (gameState.combo > 1) {
+                setTimeout(() => audioManager.play('combo', gameState.combo), 200);
+            }
+        }
+
+        // 增强的Combo特效
         if (gameState.combo > 1) {
-            document.getElementById('combo-count').classList.add('combo-effect');
-            setTimeout(() => {
-                document.getElementById('combo-count').classList.remove('combo-effect');
-            }, 800);
+            showComboEffect(gameState.combo);
         }
     } else {
         gameState.lives--;
         gameState.combo = 0;
+
+        // 播放错误答案音效
+        if (window.audioManager) {
+            audioManager.play('wrong');
+        }
 
         // 记录错题
         gameState.wrongAnswers.push({
@@ -200,6 +242,58 @@ function selectAnswer(selectedIndex, selectedOption) {
             nextQuestion();
         }
     }, 1500);
+}
+
+// 显示增强的Combo特效
+function showComboEffect(comboCount) {
+    const comboElement = document.getElementById('combo-count');
+    const comboDisplay = document.getElementById('combo-display');
+
+    // 移除之前的特效类
+    comboElement.classList.remove('combo-effect', 'combo-effect-2', 'combo-effect-3', 'combo-effect-high');
+
+    // 根据连击数选择不同的特效
+    let effectClass;
+    let comboText = '';
+
+    if (comboCount >= 10) {
+        effectClass = 'combo-effect-high';
+        comboText = '🔥 神级连击！';
+    } else if (comboCount >= 6) {
+        effectClass = 'combo-effect-3';
+        comboText = '⚡ 超级连击！';
+    } else if (comboCount >= 4) {
+        effectClass = 'combo-effect-2';
+        comboText = '✨ 连击！';
+    } else {
+        effectClass = 'combo-effect';
+        comboText = '👍 不错！';
+    }
+
+    // 应用特效
+    comboElement.classList.add(effectClass);
+
+    // 显示连击提示文字
+    if (comboCount >= 3) {
+        const textElement = document.createElement('div');
+        textElement.className = 'combo-text';
+        textElement.textContent = comboText;
+        comboDisplay.style.position = 'relative';
+        comboDisplay.appendChild(textElement);
+
+        // 1秒后移除文字
+        setTimeout(() => {
+            if (textElement.parentNode) {
+                textElement.parentNode.removeChild(textElement);
+            }
+        }, 1000);
+    }
+
+    // 移除特效类
+    const duration = comboCount >= 10 ? 1500 : comboCount >= 6 ? 1200 : comboCount >= 4 ? 1000 : 800;
+    setTimeout(() => {
+        comboElement.classList.remove(effectClass);
+    }, duration);
 }
 
 // 显示答案反馈
@@ -230,6 +324,15 @@ function nextQuestion() {
 // 结束关卡
 function endLevel(success) {
     const playTime = Date.now() - gameState.startTime;
+
+    // 播放结束音效
+    if (window.audioManager) {
+        if (success) {
+            audioManager.play('complete');
+        } else {
+            audioManager.play('wrong');
+        }
+    }
 
     // 记录游戏会话
     StorageAPI.recordGameSession({
@@ -286,19 +389,167 @@ function renderWrongAnswers() {
 
     if (gameState.wrongAnswers.length === 0) {
         container.innerHTML = '<p class="text-slate-500 text-center">太棒了！没有答错任何题目。</p>';
+        updateResultButtons(true); // 没有错题，直接可以继续
         return;
     }
 
-    gameState.wrongAnswers.forEach(wrong => {
+    // 为每个错题创建卡片
+    gameState.wrongAnswers.forEach((wrong, index) => {
         const div = document.createElement('div');
-        div.className = 'p-3 bg-slate-50 rounded-lg';
+        div.className = 'p-4 bg-slate-50 rounded-lg mb-3 wrong-answer-card';
+        div.setAttribute('data-index', index);
+
         div.innerHTML = `
-            <p class="font-bold text-slate-800">${wrong.word}</p>
-            <p class="text-green-600 font-semibold">正确答案：${wrong.correctAnswer}</p>
-            <p class="text-red-500 text-sm">你的答案：${wrong.userAnswer}</p>
+            <div class="flex items-center justify-between mb-2">
+                <p class="font-bold text-slate-800 text-lg">${wrong.word}</p>
+                <button class="play-pronunciation-btn text-blue-500 hover:text-blue-700" onclick="playWrongAnswerPronunciation('${wrong.word}')">
+                    🔊
+                </button>
+            </div>
+            <p class="text-green-600 font-semibold mb-1">正确答案：${wrong.correctAnswer}</p>
+            <p class="text-red-500 text-sm mb-3">你的答案：${wrong.userAnswer}</p>
+            <div class="flex space-x-2">
+                <button
+                    class="remember-btn flex-1 bg-blue-500 text-white py-2 px-4 rounded-lg text-sm hover:bg-blue-600 transition-all"
+                    onclick="markAsRemembered(${index})"
+                >
+                    ✓ 我记住了
+                </button>
+                <button
+                    class="need-review-btn bg-orange-500 text-white py-2 px-4 rounded-lg text-sm hover:bg-orange-600 transition-all"
+                    onclick="markForReview(${index})"
+                >
+                    📚 需要复习
+                </button>
+            </div>
         `;
         container.appendChild(div);
     });
+
+    // 添加整体确认按钮
+    const confirmDiv = document.createElement('div');
+    confirmDiv.className = 'mt-4 p-4 bg-blue-50 rounded-lg';
+    confirmDiv.innerHTML = `
+        <p class="text-blue-700 font-semibold mb-2">📝 错题回顾进度</p>
+        <div id="review-progress" class="text-sm text-blue-600 mb-3">
+            还有 ${gameState.wrongAnswers.length} 个错题需要确认
+        </div>
+        <button
+            id="confirm-all-btn"
+            class="w-full bg-green-500 text-white py-2 px-4 rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition-all"
+            onclick="confirmAllReviewed()"
+            disabled
+        >
+            继续下一关
+        </button>
+    `;
+    container.appendChild(confirmDiv);
+
+    // 初始化回顾状态
+    gameState.reviewStatus = gameState.wrongAnswers.map(() => 'pending');
+    updateResultButtons(false); // 有错题，需要先确认
+}
+
+// 播放错题发音
+function playWrongAnswerPronunciation(word) {
+    if (window.audioManager) {
+        audioManager.playWordPronunciation(word);
+    }
+}
+
+// 标记为已记住
+function markAsRemembered(index) {
+    gameState.reviewStatus[index] = 'remembered';
+    updateWrongAnswerCard(index, 'remembered');
+    updateReviewProgress();
+}
+
+// 标记需要复习
+function markForReview(index) {
+    gameState.reviewStatus[index] = 'review';
+    updateWrongAnswerCard(index, 'review');
+    updateReviewProgress();
+}
+
+// 更新错题卡片状态
+function updateWrongAnswerCard(index, status) {
+    const card = document.querySelector(`[data-index="${index}"]`);
+    if (!card) return;
+
+    // 移除之前的状态类
+    card.classList.remove('card-remembered', 'card-review');
+
+    if (status === 'remembered') {
+        card.classList.add('card-remembered');
+        card.style.backgroundColor = '#dcfce7'; // 绿色背景
+        card.style.borderLeft = '4px solid #22c55e';
+    } else if (status === 'review') {
+        card.classList.add('card-review');
+        card.style.backgroundColor = '#fed7aa'; // 橙色背景
+        card.style.borderLeft = '4px solid #f97316';
+    }
+
+    // 禁用按钮
+    const buttons = card.querySelectorAll('.remember-btn, .need-review-btn');
+    buttons.forEach(btn => {
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+    });
+}
+
+// 更新回顾进度
+function updateReviewProgress() {
+    const pending = gameState.reviewStatus.filter(status => status === 'pending').length;
+    const remembered = gameState.reviewStatus.filter(status => status === 'remembered').length;
+    const needReview = gameState.reviewStatus.filter(status => status === 'review').length;
+
+    const progressElement = document.getElementById('review-progress');
+    const confirmBtn = document.getElementById('confirm-all-btn');
+
+    if (pending === 0) {
+        progressElement.innerHTML = `
+            ✅ 错题回顾完成！<br>
+            <span class="text-green-600">已掌握: ${remembered}个</span> |
+            <span class="text-orange-600">需复习: ${needReview}个</span>
+        `;
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = '继续下一关';
+        updateResultButtons(true);
+    } else {
+        progressElement.textContent = `还有 ${pending} 个错题需要确认`;
+    }
+}
+
+// 确认所有错题已回顾
+function confirmAllReviewed() {
+    // 保存需要复习的单词到本地存储
+    const wordsNeedReview = gameState.wrongAnswers
+        .filter((_, index) => gameState.reviewStatus[index] === 'review')
+        .map(wrong => wrong.word);
+
+    if (wordsNeedReview.length > 0) {
+        const stats = StorageAPI.loadStatistics();
+        stats.wordsNeedReview = (stats.wordsNeedReview || []).concat(wordsNeedReview);
+        StorageAPI.saveStatistics(stats);
+    }
+
+    // 播放确认音效
+    if (window.audioManager) {
+        audioManager.play('complete');
+    }
+
+    // 显示成功提示
+    const progressElement = document.getElementById('review-progress');
+    progressElement.innerHTML = '🎉 错题回顾完成，可以继续下一关了！';
+}
+
+// 更新结果界面按钮
+function updateResultButtons(canProceed) {
+    const nextLevelBtn = document.getElementById('next-level-btn');
+    if (nextLevelBtn) {
+        nextLevelBtn.disabled = !canProceed;
+        nextLevelBtn.style.opacity = canProceed ? '1' : '0.5';
+    }
 }
 
 // 界面切换函数

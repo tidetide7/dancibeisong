@@ -11,11 +11,11 @@
     <div id="screen-main-menu" class="screen min-h-screen flex flex-col items-center justify-center p-4">
         <div class="w-full max-w-md mx-auto">
             <header class="text-center mb-6">
-                <h1 class="text-4xl font-bold text-slate-800">单词勇者</h1>
-                <p class="text-slate-500 mt-1">开启你的词汇冒险之旅</p>
+                <h1 class="text-4xl font-bold game-header">单词勇者</h1>
+                <p class="text-white/80 mt-1 font-medium">开启你的词汇冒险之旅</p>
             </header>
 
-            <main id="level-grid" class="grid grid-cols-10 gap-2 p-4 bg-white rounded-xl shadow-md">
+            <main id="level-grid" class="level-grid-container grid grid-cols-10 gap-2 p-4 rounded-xl">
                 <!-- 关卡网格将由 JavaScript 动态生成 -->
             </main>
         </div>
@@ -23,7 +23,7 @@
 
     <div id="screen-gameplay" class="screen min-h-screen flex-col items-center justify-center p-4 hidden">
         <div class="w-full max-w-md mx-auto">
-            <main class="bg-white rounded-xl shadow-lg p-6">
+            <main class="main-card rounded-xl p-6">
                 <div class="flex justify-between items-center mb-6">
                     <div id="question-progress" class="text-sm font-bold text-slate-500">第 1 / 10 题</div>
                     <div id="combo-display" class="flex items-center space-x-1">
@@ -36,7 +36,11 @@
                 </div>
 
                 <div class="text-center my-10">
+                    <div id="question-type-indicator" class="text-sm text-slate-500 mb-2">看词选意</div>
                     <h2 id="question-word" class="text-5xl font-bold text-slate-800">loading...</h2>
+                    <button id="play-audio-btn" class="mt-4 bg-blue-500 text-white px-6 py-2 rounded-lg hidden" onclick="playQuestionAudio()">
+                        🔊 播放发音
+                    </button>
                 </div>
 
                 <div id="options-container" class="grid grid-cols-2 gap-4">
@@ -50,7 +54,7 @@
 
     <div id="screen-results" class="screen min-h-screen flex-col items-center justify-center p-4 hidden">
         <div class="w-full max-w-md mx-auto">
-            <main class="bg-white rounded-xl shadow-lg p-8 text-center">
+            <main class="main-card rounded-xl p-8 text-center">
                 <div id="result-icon" class="mx-auto bg-green-100 rounded-full h-20 w-20 flex items-center justify-center mb-4">
                     <!-- 结果图标将由 JavaScript 动态设置 -->
                 </div>
@@ -79,6 +83,7 @@
         </div>
     </div>
 
+    <script src="js/audio.js"></script>
     <script src="js/storage.js"></script>
     <script src="data/vocabulary.js"></script>
     <script src="data/levels.js"></script>

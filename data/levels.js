@@ -120,22 +120,44 @@ const LevelsAPI = {
         const shuffled = [...levelWords].sort(() => 0.5 - Math.random());
         const selectedWords = shuffled.slice(0, questionCount);
 
-        // 为每个单词生成题目
-        return selectedWords.map(word => {
-            const wrongOptions = VocabularyAPI.getRandomWrongOptions(word, 3);
-            const allOptions = [word.meaning, ...wrongOptions];
+        // 为每个单词生成题目，随机选择题型
+        return selectedWords.map((word, index) => {
+            // 50%概率是"看词选意"，50%概率是"听音选词"
+            const isListeningQuestion = Math.random() < 0.5;
 
-            // 打乱选项顺序
-            const shuffledOptions = allOptions.sort(() => 0.5 - Math.random());
+            if (isListeningQuestion) {
+                // 听音选词：播放发音，选择正确的英文单词
+                const wrongWords = VocabularyAPI.getRandomWords(3).filter(w => w.id !== word.id);
+                const allOptions = [word.word, ...wrongWords.map(w => w.word)];
+                const shuffledOptions = allOptions.sort(() => 0.5 - Math.random());
 
-            return {
-                id: Math.random().toString(36).substr(2, 9),
-                word: word.word,
-                pronunciation: word.pronunciation,
-                correctAnswer: word.meaning,
-                options: shuffledOptions,
-                correctIndex: shuffledOptions.indexOf(word.meaning)
-            };
+                return {
+                    id: Math.random().toString(36).substr(2, 9),
+                    type: 'listening', // 题型标识
+                    word: word.word,
+                    pronunciation: word.pronunciation,
+                    meaning: word.meaning,
+                    correctAnswer: word.word,
+                    options: shuffledOptions,
+                    correctIndex: shuffledOptions.indexOf(word.word)
+                };
+            } else {
+                // 看词选意：显示英文单词，选择正确的中文意思
+                const wrongOptions = VocabularyAPI.getRandomWrongOptions(word, 3);
+                const allOptions = [word.meaning, ...wrongOptions];
+                const shuffledOptions = allOptions.sort(() => 0.5 - Math.random());
+
+                return {
+                    id: Math.random().toString(36).substr(2, 9),
+                    type: 'reading', // 题型标识
+                    word: word.word,
+                    pronunciation: word.pronunciation,
+                    meaning: word.meaning,
+                    correctAnswer: word.meaning,
+                    options: shuffledOptions,
+                    correctIndex: shuffledOptions.indexOf(word.meaning)
+                };
+            }
         });
     },
 
