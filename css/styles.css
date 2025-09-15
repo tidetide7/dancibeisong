@@ -1,0 +1,101 @@
+/* 单词勇者自定义样式 */
+
+.screen {
+    transition: all 0.3s ease-in-out;
+}
+
+/* 关卡网格样式 */
+.level-button {
+    transition: all 0.3s ease;
+}
+
+.level-button:hover {
+    transform: scale(1.05);
+}
+
+/* 游戏界面动画 */
+.question-enter {
+    animation: slideInFromTop 0.5s ease-out;
+}
+
+.option-correct {
+    background-color: #10b981 !important;
+    color: white !important;
+    animation: correctPulse 0.6s ease-out;
+}
+
+.option-wrong {
+    background-color: #ef4444 !important;
+    color: white !important;
+    animation: wrongShake 0.6s ease-out;
+}
+
+/* Combo特效 */
+.combo-effect {
+    animation: comboGlow 0.8s ease-out;
+}
+
+/* 生命值动画 */
+.health-lost {
+    animation: healthLoss 0.5s ease-out;
+}
+
+/* 关键帧动画 */
+@keyframes slideInFromTop {
+    from {
+        opacity: 0;
+        transform: translateY(-50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes correctPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+@keyframes wrongShake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+@keyframes comboGlow {
+    0% {
+        text-shadow: 0 0 5px #f59e0b;
+        transform: scale(1);
+    }
+    50% {
+        text-shadow: 0 0 20px #f59e0b, 0 0 30px #f59e0b;
+        transform: scale(1.1);
+    }
+    100% {
+        text-shadow: 0 0 5px #f59e0b;
+        transform: scale(1);
+    }
+}
+
+@keyframes healthLoss {
+    0% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.3; transform: scale(0.8); }
+    100% { opacity: 0.3; transform: scale(1); }
+}
+
+/* 响应式设计 */
+@media (max-width: 480px) {
+    #level-grid {
+        gap: 1px;
+    }
+
+    .level-button {
+        font-size: 0.75rem;
+    }
+
+    #question-word {
+        font-size: 2.5rem;
+    }
+}
