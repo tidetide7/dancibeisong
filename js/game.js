@@ -16,20 +16,48 @@ let gameState = {
 };
 
 // 初始化游戏
-function initGame() {
+async function initGame() {
     console.log('初始化单词勇者游戏...');
 
-    // 加载设置和进度
-    gameState.settings = StorageAPI.loadGameSettings();
-    const progress = StorageAPI.loadGameProgress();
+    // 显示初始加载指示器
+    if (window.loadingIndicator) {
+        window.loadingIndicator.show();
+    }
 
-    // 更新关卡数据
-    updateLevelsFromProgress(progress);
+    try {
+        // 预加载关键资源
+        if (window.lazyLoader) {
+            await window.lazyLoader.preloadCriticalResources();
+        }
 
-    // 渲染主菜单
-    renderMainMenu();
+        // 加载设置和进度
+        gameState.settings = StorageAPI.loadGameSettings();
+        const progress = StorageAPI.loadGameProgress();
 
-    console.log('游戏初始化完成');
+        // 应用音频设置
+        if (window.audioManager && gameState.settings) {
+            audioManager.applySettings(gameState.settings);
+        }
+
+        // 更新关卡数据
+        updateLevelsFromProgress(progress);
+
+        // 渲染主菜单
+        renderMainMenu();
+
+        console.log('游戏初始化完成');
+
+    } catch (error) {
+        console.error('游戏初始化失败:', error);
+        alert('游戏初始化失败，请刷新页面重试！');
+    } finally {
+        // 隐藏加载指示器
+        if (window.loadingIndicator) {
+            setTimeout(() => {
+                window.loadingIndicator.hide();
+            }, 300);
+        }
+    }
 }
 
 // 根据进度更新关卡状态
@@ -76,28 +104,55 @@ function renderMainMenu() {
 }
 
 // 开始关卡
-function startLevel(levelId) {
+async function startLevel(levelId) {
     console.log(`开始关卡 ${levelId}`);
 
-    gameState.currentLevel = levelId;
-    gameState.currentQuestionIndex = 0;
-    gameState.lives = 3;
-    gameState.combo = 0;
-    gameState.score = 0;
-    gameState.wrongAnswers = [];
-    gameState.startTime = Date.now();
-
-    // 生成题目
-    gameState.questions = LevelsAPI.generateLevelQuestions(levelId, 10);
-
-    if (gameState.questions.length === 0) {
-        alert('关卡数据加载失败！');
-        return;
+    // 显示加载指示器
+    if (window.loadingIndicator) {
+        window.loadingIndicator.show();
     }
 
-    // 切换到游戏界面
-    showScreen('screen-gameplay');
-    renderGameplay();
+    try {
+        // 预加载关卡资源
+        if (window.lazyLoader) {
+            await window.lazyLoader.loadLevelResources(levelId);
+        }
+
+        gameState.currentLevel = levelId;
+        gameState.currentQuestionIndex = 0;
+        gameState.lives = 3;
+        gameState.combo = 0;
+        gameState.score = 0;
+        gameState.wrongAnswers = [];
+        gameState.startTime = Date.now();
+
+        // 生成题目
+        gameState.questions = LevelsAPI.generateLevelQuestions(levelId, 10);
+
+        if (gameState.questions.length === 0) {
+            alert('关卡数据加载失败！');
+            return;
+        }
+
+        // 预加载这些单词的语音
+        const words = gameState.questions.map(q => q.word);
+        if (window.audioManager && audioManager.loadVoicesLazily) {
+            await audioManager.loadVoicesLazily(words);
+        }
+
+        // 切换到游戏界面
+        showScreen('screen-gameplay');
+        renderGameplay();
+
+    } catch (error) {
+        console.error('关卡加载失败:', error);
+        alert('关卡加载失败，请重试！');
+    } finally {
+        // 隐藏加载指示器
+        if (window.loadingIndicator) {
+            window.loadingIndicator.hide();
+        }
+    }
 }
 
 // 渲染游戏界面
@@ -581,6 +636,199 @@ function goToNextLevel() {
     } else {
         backToMainMenu();
     }
+}
+
+// 渲染统计页面
+function renderStatistics() {
+    const stats = StorageAPI.getLearningStats();
+
+    document.getElementById('total-play-time').textContent = stats.totalPlayTimeMinutes;
+    document.getElementById('study-days').textContent = stats.studyDays;
+    document.getElementById('accuracy-rate').textContent = `${stats.accuracy}%`;
+    document.getElementById('total-questions').textContent = stats.totalQuestionsAnswered;
+    document.getElementById('correct-answers').textContent = stats.correctAnswers;
+    document.getElementById('best-combo').textContent = stats.bestCombo;
+    document.getElementById('words-learned').textContent = stats.wordsLearned;
+    document.getElementById('completed-levels').textContent = stats.completedLevels;
+    document.getElementById('games-played').textContent = stats.gamesPlayed;
+}
+
+// 渲染成就页面
+function renderAchievements() {
+    const achievements = StorageAPI.getAchievements();
+    const container = document.getElementById('achievements-list');
+
+    container.innerHTML = '';
+
+    if (achievements.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-8 text-slate-500">
+                <p class="text-4xl mb-4">🏆</p>
+                <p>还没有获得成就</p>
+                <p class="text-sm">继续学习来解锁你的第一个成就吧！</p>
+            </div>
+        `;
+        return;
+    }
+
+    achievements.forEach(achievement => {
+        const achievementCard = document.createElement('div');
+        achievementCard.className = 'bg-white rounded-lg p-4 border flex items-center space-x-4';
+
+        achievementCard.innerHTML = `
+            <div class="text-3xl">${achievement.icon}</div>
+            <div class="flex-1">
+                <h4 class="font-bold text-slate-800">${achievement.name}</h4>
+                <p class="text-slate-600 text-sm">${achievement.description}</p>
+                <p class="text-xs text-slate-400 mt-1">
+                    获得时间: ${new Date(achievement.earnedDate).toLocaleDateString()}
+                </p>
+            </div>
+            <div class="text-green-500">
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                </svg>
+            </div>
+        `;
+
+        container.appendChild(achievementCard);
+    });
+}
+
+// 初始化设置页面
+function initializeSettings() {
+    const settings = StorageAPI.loadGameSettings();
+
+    // 设置开关状态
+    document.getElementById('sound-toggle').checked = settings.soundEnabled;
+    document.getElementById('effects-toggle').checked = settings.effectsEnabled;
+
+    // 添加事件监听器
+    document.getElementById('sound-toggle').addEventListener('change', function(e) {
+        const newSettings = StorageAPI.loadGameSettings();
+        newSettings.soundEnabled = e.target.checked;
+        StorageAPI.saveGameSettings(newSettings);
+
+        // 更新音频管理器设置
+        if (window.audioManager) {
+            audioManager.setEnabled(e.target.checked);
+        }
+    });
+
+    document.getElementById('effects-toggle').addEventListener('change', function(e) {
+        const newSettings = StorageAPI.loadGameSettings();
+        newSettings.effectsEnabled = e.target.checked;
+        StorageAPI.saveGameSettings(newSettings);
+
+        // 更新视觉特效设置
+        document.body.classList.toggle('effects-disabled', !e.target.checked);
+    });
+}
+
+// 导出游戏数据
+function exportGameData() {
+    const data = StorageAPI.exportData();
+    if (!data) {
+        alert('导出数据失败！');
+        return;
+    }
+
+    // 创建下载链接
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+
+    const now = new Date();
+    const filename = `wordHero_backup_${now.getFullYear()}_${(now.getMonth()+1).toString().padStart(2,'0')}_${now.getDate().toString().padStart(2,'0')}.json`;
+
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    alert(`数据导出成功！文件已保存为：${filename}`);
+}
+
+// 导入游戏数据
+function importGameData() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+
+    input.onchange = function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const success = StorageAPI.importData(e.target.result);
+                if (success) {
+                    alert('数据导入成功！页面将刷新以应用新数据。');
+                    location.reload();
+                } else {
+                    alert('数据导入失败！请检查文件格式。');
+                }
+            } catch (error) {
+                alert('数据导入失败！文件格式错误。');
+            }
+        };
+        reader.readAsText(file);
+    };
+
+    input.click();
+}
+
+// 清除游戏数据
+function clearGameData() {
+    const confirmed = confirm('确定要清除所有游戏数据吗？\n这包括：\n- 游戏进度\n- 学习统计\n- 设置信息\n\n此操作不可撤销！');
+
+    if (confirmed) {
+        const doubleConfirm = confirm('真的要删除所有数据吗？这将无法恢复！');
+        if (doubleConfirm) {
+            const success = StorageAPI.clearAllData();
+            if (success) {
+                alert('所有数据已清除！页面将刷新。');
+                location.reload();
+            } else {
+                alert('清除数据失败！');
+            }
+        }
+    }
+}
+
+// 重写showScreen函数以支持新页面
+function showScreen(screenId) {
+    document.querySelectorAll('.screen').forEach(el => {
+        el.classList.add('hidden');
+        el.classList.remove('flex');
+    });
+
+    const targetScreen = document.getElementById(screenId);
+    if (targetScreen) {
+        targetScreen.classList.remove('hidden');
+        targetScreen.classList.add('flex');
+    }
+
+    // 根据页面类型渲染内容
+    switch(screenId) {
+        case 'screen-statistics':
+            renderStatistics();
+            break;
+        case 'screen-achievements':
+            renderAchievements();
+            break;
+        case 'screen-settings':
+            initializeSettings();
+            break;
+        case 'screen-main-menu':
+            renderMainMenu();
+            break;
+    }
+
+    gameState.currentScreen = screenId.replace('screen-', '');
 }
 
 // 页面加载完成后初始化游戏

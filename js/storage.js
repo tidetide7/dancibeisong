@@ -303,5 +303,154 @@ const StorageAPI = {
             console.error('导入数据失败:', error);
             return false;
         }
+    },
+
+    // 获取学习统计数据
+    getLearningStats: function() {
+        const stats = this.loadStatistics();
+        const progress = this.loadGameProgress();
+
+        // 计算总学习时间（分钟）
+        const totalPlayTimeMinutes = Math.round(stats.totalPlayTime / 60000);
+
+        // 计算答题准确率
+        const accuracy = stats.totalQuestionsAnswered > 0 ?
+            Math.round((stats.correctAnswers / stats.totalQuestionsAnswered) * 100) : 0;
+
+        // 计算学习天数
+        const studyDays = stats.dailyStreak;
+
+        // 计算掌握的单词数
+        const wordsLearned = stats.wordsLearned.length;
+
+        // 计算完成的关卡数
+        const completedLevels = progress.completedLevels.length;
+
+        return {
+            totalPlayTimeMinutes,
+            accuracy,
+            studyDays,
+            wordsLearned,
+            completedLevels,
+            totalQuestionsAnswered: stats.totalQuestionsAnswered,
+            correctAnswers: stats.correctAnswers,
+            wrongAnswers: stats.wrongAnswers,
+            bestCombo: stats.bestCombo,
+            gamesPlayed: stats.gamesPlayed,
+            lastPlayDate: stats.lastPlayDate
+        };
+    },
+
+    // 获取成就数据
+    getAchievements: function() {
+        const stats = this.loadStatistics();
+        const learningStats = this.getLearningStats();
+        const achievements = [];
+
+        // 连续学习成就
+        if (learningStats.studyDays >= 1) {
+            achievements.push({
+                id: 'daily_1',
+                name: '初学者',
+                description: '连续学习1天',
+                icon: '🌟',
+                earned: true,
+                earnedDate: stats.lastPlayDate
+            });
+        }
+
+        if (learningStats.studyDays >= 3) {
+            achievements.push({
+                id: 'daily_3',
+                name: '坚持者',
+                description: '连续学习3天',
+                icon: '🔥',
+                earned: true,
+                earnedDate: stats.lastPlayDate
+            });
+        }
+
+        if (learningStats.studyDays >= 7) {
+            achievements.push({
+                id: 'daily_7',
+                name: '勇者',
+                description: '连续学习7天',
+                icon: '⚔️',
+                earned: true,
+                earnedDate: stats.lastPlayDate
+            });
+        }
+
+        // 高分成就
+        if (learningStats.accuracy >= 80 && learningStats.totalQuestionsAnswered >= 50) {
+            achievements.push({
+                id: 'accuracy_80',
+                name: '神准射手',
+                description: '答题准确率达到80%',
+                icon: '🎯',
+                earned: true,
+                earnedDate: stats.lastPlayDate
+            });
+        }
+
+        if (learningStats.accuracy >= 95 && learningStats.totalQuestionsAnswered >= 100) {
+            achievements.push({
+                id: 'accuracy_95',
+                name: '完美主义者',
+                description: '答题准确率达到95%',
+                icon: '💎',
+                earned: true,
+                earnedDate: stats.lastPlayDate
+            });
+        }
+
+        // 完美通关成就
+        if (learningStats.bestCombo >= 10) {
+            achievements.push({
+                id: 'combo_10',
+                name: '连击达人',
+                description: '获得10连击',
+                icon: '⚡',
+                earned: true,
+                earnedDate: stats.lastPlayDate
+            });
+        }
+
+        // 关卡完成成就
+        if (learningStats.completedLevels >= 10) {
+            achievements.push({
+                id: 'levels_10',
+                name: '探索者',
+                description: '完成10个关卡',
+                icon: '🗺️',
+                earned: true,
+                earnedDate: stats.lastPlayDate
+            });
+        }
+
+        if (learningStats.completedLevels >= 50) {
+            achievements.push({
+                id: 'levels_50',
+                name: '征服者',
+                description: '完成50个关卡',
+                icon: '👑',
+                earned: true,
+                earnedDate: stats.lastPlayDate
+            });
+        }
+
+        return achievements;
+    },
+
+    // 记录成就获得
+    recordAchievement: function(achievementId) {
+        const stats = this.loadStatistics();
+
+        if (!stats.achievements.includes(achievementId)) {
+            stats.achievements.push(achievementId);
+            return this.saveStatistics(stats);
+        }
+
+        return true;
     }
 };

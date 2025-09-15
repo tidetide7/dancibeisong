@@ -18,6 +18,19 @@
             <main id="level-grid" class="level-grid-container grid grid-cols-10 gap-2 p-4 rounded-xl">
                 <!-- 关卡网格将由 JavaScript 动态生成 -->
             </main>
+
+            <!-- 底部导航按钮 -->
+            <div class="flex justify-center space-x-4 mt-6">
+                <button onclick="showScreen('screen-statistics')" class="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-600 transition-all">
+                    📊 统计
+                </button>
+                <button onclick="showScreen('screen-achievements')" class="bg-purple-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-purple-600 transition-all">
+                    🏆 成就
+                </button>
+                <button onclick="showScreen('screen-settings')" class="bg-gray-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-600 transition-all">
+                    ⚙️ 设置
+                </button>
+            </div>
         </div>
     </div>
 
@@ -80,6 +93,173 @@
                     </button>
                 </div>
             </main>
+        </div>
+    </div>
+
+    <!-- 统计页面 -->
+    <div id="screen-statistics" class="screen min-h-screen flex-col items-center justify-center p-4 hidden">
+        <div class="w-full max-w-md mx-auto">
+            <header class="text-center mb-6">
+                <h1 class="text-3xl font-bold game-header">学习统计</h1>
+                <p class="text-white/80 mt-1">查看你的学习进度和成果</p>
+            </header>
+
+            <main class="main-card rounded-xl p-6 space-y-6">
+                <!-- 总览卡片 -->
+                <div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-4 text-white">
+                    <h3 class="text-lg font-bold mb-2">学习总览</h3>
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <div class="font-bold text-2xl" id="total-play-time">0</div>
+                            <div class="opacity-80">分钟</div>
+                        </div>
+                        <div>
+                            <div class="font-bold text-2xl" id="study-days">0</div>
+                            <div class="opacity-80">学习天数</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 答题统计 -->
+                <div class="bg-white rounded-lg p-4 border">
+                    <h3 class="text-lg font-bold mb-4 text-slate-700">答题统计</h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-600">答题准确率</span>
+                            <span class="font-bold text-green-600 text-lg" id="accuracy-rate">0%</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-600">总答题数</span>
+                            <span class="font-bold" id="total-questions">0</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-600">正确答题</span>
+                            <span class="font-bold text-green-600" id="correct-answers">0</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-600">最高连击</span>
+                            <span class="font-bold text-orange-500" id="best-combo">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 学习成果 -->
+                <div class="bg-white rounded-lg p-4 border">
+                    <h3 class="text-lg font-bold mb-4 text-slate-700">学习成果</h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-600">掌握单词</span>
+                            <span class="font-bold text-blue-600" id="words-learned">0</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-600">完成关卡</span>
+                            <span class="font-bold text-purple-600" id="completed-levels">0</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-600">游戏场次</span>
+                            <span class="font-bold" id="games-played">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 学习曲线图表占位 -->
+                <div class="bg-white rounded-lg p-4 border">
+                    <h3 class="text-lg font-bold mb-4 text-slate-700">学习曲线</h3>
+                    <div class="h-32 bg-slate-100 rounded-lg flex items-center justify-center">
+                        <span class="text-slate-500">📈 学习趋势图表</span>
+                    </div>
+                </div>
+            </main>
+
+            <button onclick="showScreen('screen-main-menu')" class="w-full mt-4 bg-gray-300 text-gray-700 py-2 rounded-lg text-sm">
+                返回主页
+            </button>
+        </div>
+    </div>
+
+    <!-- 成就页面 -->
+    <div id="screen-achievements" class="screen min-h-screen flex-col items-center justify-center p-4 hidden">
+        <div class="w-full max-w-md mx-auto">
+            <header class="text-center mb-6">
+                <h1 class="text-3xl font-bold game-header">成就徽章</h1>
+                <p class="text-white/80 mt-1">展示你的学习成就</p>
+            </header>
+
+            <main class="main-card rounded-xl p-6">
+                <div id="achievements-list" class="space-y-4">
+                    <!-- 成就徽章将由 JavaScript 动态生成 -->
+                </div>
+            </main>
+
+            <button onclick="showScreen('screen-main-menu')" class="w-full mt-4 bg-gray-300 text-gray-700 py-2 rounded-lg text-sm">
+                返回主页
+            </button>
+        </div>
+    </div>
+
+    <!-- 设置页面 -->
+    <div id="screen-settings" class="screen min-h-screen flex-col items-center justify-center p-4 hidden">
+        <div class="w-full max-w-md mx-auto">
+            <header class="text-center mb-6">
+                <h1 class="text-3xl font-bold game-header">游戏设置</h1>
+                <p class="text-white/80 mt-1">自定义你的游戏体验</p>
+            </header>
+
+            <main class="main-card rounded-xl p-6 space-y-6">
+                <!-- 音效设置 -->
+                <div class="bg-white rounded-lg p-4 border">
+                    <h3 class="text-lg font-bold mb-4 text-slate-700">音效设置</h3>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-600">游戏音效</span>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="sound-toggle" class="sr-only peer" checked>
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-600">视觉特效</span>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="effects-toggle" class="sr-only peer" checked>
+                                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 数据管理 -->
+                <div class="bg-white rounded-lg p-4 border">
+                    <h3 class="text-lg font-bold mb-4 text-slate-700">数据管理</h3>
+                    <div class="space-y-3">
+                        <button onclick="exportGameData()" class="w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition-all">
+                            📤 导出数据
+                        </button>
+                        <button onclick="importGameData()" class="w-full bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-600 transition-all">
+                            📥 导入数据
+                        </button>
+                        <button onclick="clearGameData()" class="w-full bg-red-500 text-white py-2 px-4 rounded-lg hover:bg-red-600 transition-all">
+                            🗑️ 清除所有数据
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 游戏信息 -->
+                <div class="bg-white rounded-lg p-4 border">
+                    <h3 class="text-lg font-bold mb-4 text-slate-700">关于游戏</h3>
+                    <div class="text-sm text-slate-600 space-y-2">
+                        <p><strong>版本:</strong> 1.0.0</p>
+                        <p><strong>开发者:</strong> 单词勇者团队</p>
+                        <p><strong>词汇来源:</strong> CET-4 高频词汇</p>
+                        <div class="text-xs text-slate-500 mt-4">
+                            <p>感谢你选择单词勇者！通过游戏化的方式，让英语学习变得更有趣。</p>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <button onclick="showScreen('screen-main-menu')" class="w-full mt-4 bg-gray-300 text-gray-700 py-2 rounded-lg text-sm">
+                返回主页
+            </button>
         </div>
     </div>
 

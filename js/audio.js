@@ -203,5 +203,210 @@ class AudioManager {
     }
 }
 
-// 创建全局音频管理器实例
+// 懒加载管理器
+class LazyLoader {
+    constructor() {
+        this.loadedResources = new Set();
+        this.pendingLoads = new Map();
+        this.observers = [];
+    }
+
+    // 注册进度观察者
+    addProgressObserver(callback) {
+        this.observers.push(callback);
+    }
+
+    // 通知进度变化
+    notifyProgress(current, total, type) {
+        this.observers.forEach(callback => {
+            callback({ current, total, type });
+        });
+    }
+
+    // 懒加载音频资源
+    async loadAudioResource(resourceId, loadFunction) {
+        if (this.loadedResources.has(resourceId)) {
+            return true; // Already loaded
+        }
+
+        if (this.pendingLoads.has(resourceId)) {
+            return this.pendingLoads.get(resourceId); // Already loading
+        }
+
+        const loadPromise = new Promise(async (resolve, reject) => {
+            try {
+                this.notifyProgress(0, 1, `Loading ${resourceId}...`);
+                await loadFunction();
+                this.loadedResources.add(resourceId);
+                this.notifyProgress(1, 1, `Loaded ${resourceId}`);
+                resolve(true);
+            } catch (error) {
+                console.warn(`Failed to load resource ${resourceId}:`, error);
+                reject(error);
+            }
+        });
+
+        this.pendingLoads.set(resourceId, loadPromise);
+        return loadPromise;
+    }
+
+    // 预加载关键资源
+    async preloadCriticalResources() {
+        const criticalResources = [
+            'game-sounds',
+            'ui-interactions',
+            'basic-voices'
+        ];
+
+        this.notifyProgress(0, criticalResources.length, 'Loading critical resources...');
+
+        for (let i = 0; i < criticalResources.length; i++) {
+            const resourceId = criticalResources[i];
+            try {
+                await this.loadAudioResource(resourceId, () => this.loadResourceByType(resourceId));
+                this.notifyProgress(i + 1, criticalResources.length, `Loaded ${resourceId}`);
+            } catch (error) {
+                console.warn(`Failed to preload ${resourceId}:`, error);
+            }
+        }
+
+        this.notifyProgress(criticalResources.length, criticalResources.length, 'Critical resources loaded');
+    }
+
+    // 根据类型加载资源
+    async loadResourceByType(resourceType) {
+        return new Promise((resolve) => {
+            // Simulate loading time for different resource types
+            const loadTimes = {
+                'game-sounds': 300,
+                'ui-interactions': 200,
+                'basic-voices': 500
+            };
+
+            setTimeout(() => {
+                resolve();
+            }, loadTimes[resourceType] || 200);
+        });
+    }
+
+    // 检查资源是否已加载
+    isResourceLoaded(resourceId) {
+        return this.loadedResources.has(resourceId);
+    }
+
+    // 批量加载关卡所需资源
+    async loadLevelResources(levelId) {
+        const resourceId = `level-${levelId}`;
+        if (this.isResourceLoaded(resourceId)) return true;
+
+        return this.loadAudioResource(resourceId, async () => {
+            // 模拟加载关卡特定资源
+            await new Promise(resolve => setTimeout(resolve, 150));
+        });
+    }
+}
+
+// 进度指示器管理
+class LoadingIndicator {
+    constructor() {
+        this.isVisible = false;
+        this.indicator = null;
+        this.progressBar = null;
+        this.statusText = null;
+        this.createIndicator();
+    }
+
+    // 创建进度指示器
+    createIndicator() {
+        this.indicator = document.createElement('div');
+        this.indicator.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden';
+        this.indicator.id = 'loading-indicator';
+
+        this.indicator.innerHTML = `
+            <div class="bg-white rounded-lg p-6 max-w-sm mx-4">
+                <div class="text-center">
+                    <div class="text-2xl mb-4">🎮</div>
+                    <h3 class="font-bold text-lg mb-2 text-slate-800">加载中...</h3>
+                    <div class="w-full bg-gray-200 rounded-full h-3 mb-4">
+                        <div class="bg-blue-500 h-3 rounded-full transition-all duration-300" style="width: 0%" id="progress-bar"></div>
+                    </div>
+                    <p class="text-sm text-slate-600" id="status-text">准备加载资源</p>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(this.indicator);
+        this.progressBar = document.getElementById('progress-bar');
+        this.statusText = document.getElementById('status-text');
+    }
+
+    // 显示进度指示器
+    show() {
+        if (this.indicator) {
+            this.indicator.classList.remove('hidden');
+            this.isVisible = true;
+        }
+    }
+
+    // 隐藏进度指示器
+    hide() {
+        if (this.indicator) {
+            this.indicator.classList.add('hidden');
+            this.isVisible = false;
+        }
+    }
+
+    // 更新进度
+    updateProgress(current, total, status) {
+        if (!this.isVisible) return;
+
+        const percentage = total > 0 ? Math.round((current / total) * 100) : 0;
+
+        if (this.progressBar) {
+            this.progressBar.style.width = `${percentage}%`;
+        }
+
+        if (this.statusText && status) {
+            this.statusText.textContent = status;
+        }
+
+        // 如果加载完成，延迟隐藏指示器
+        if (current >= total && total > 0) {
+            setTimeout(() => {
+                this.hide();
+            }, 500);
+        }
+    }
+}
+
+// 扩展AudioManager以支持懒加载
+AudioManager.prototype.loadVoicesLazily = async function(words) {
+    if (!words || words.length === 0) return;
+
+    // 预加载前几个单词的语音
+    const priorityWords = words.slice(0, 5);
+
+    for (const word of priorityWords) {
+        try {
+            // 预缓存语音合成，确保首次播放更流畅
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(word);
+                utterance.volume = 0; // 静音预加载
+                speechSynthesis.speak(utterance);
+                speechSynthesis.cancel(); // 立即取消，只为初始化
+            }
+        } catch (error) {
+            console.warn(`Failed to preload voice for word: ${word}`, error);
+        }
+    }
+};
+
+// 创建全局实例
+window.lazyLoader = new LazyLoader();
+window.loadingIndicator = new LoadingIndicator();
 window.audioManager = new AudioManager();
+
+// 设置进度观察
+window.lazyLoader.addProgressObserver(({ current, total, type }) => {
+    window.loadingIndicator.updateProgress(current, total, type);
+});
