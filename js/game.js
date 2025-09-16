@@ -569,6 +569,11 @@ function updateReviewProgress() {
         `;
         confirmBtn.disabled = false;
         confirmBtn.textContent = '继续下一关';
+        // 更改按钮点击事件为直接跳转下一关
+        confirmBtn.onclick = () => {
+            confirmAllReviewed();
+            goToNextLevel();
+        };
         updateResultButtons(true);
     } else {
         progressElement.textContent = `还有 ${pending} 个错题需要确认`;
