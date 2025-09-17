@@ -452,5 +452,81 @@ const StorageAPI = {
         }
 
         return true;
+    },
+
+    // 获取学习曲线数据
+    getLearningCurveData() {
+        const stats = this.loadStatistics();
+        const today = new Date().toDateString();
+
+        // 获取或初始化每日学习数据
+        if (!stats.dailyData) {
+            stats.dailyData = {};
+        }
+
+        // 更新今日数据
+        if (!stats.dailyData[today]) {
+            stats.dailyData[today] = {
+                date: today,
+                questionsAnswered: 0,
+                correctAnswers: 0,
+                gamesPlayed: 0,
+                timeSpent: 0
+            };
+        }
+
+        // 获取最近7天的数据
+        const last7Days = [];
+        const now = new Date();
+
+        for (let i = 6; i >= 0; i--) {
+            const date = new Date(now);
+            date.setDate(date.getDate() - i);
+            const dateStr = date.toDateString();
+
+            const dayData = stats.dailyData[dateStr] || {
+                date: dateStr,
+                questionsAnswered: 0,
+                correctAnswers: 0,
+                gamesPlayed: 0,
+                timeSpent: 0
+            };
+
+            last7Days.push({
+                ...dayData,
+                shortDate: date.toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' }),
+                accuracy: dayData.questionsAnswered > 0 ? Math.round((dayData.correctAnswers / dayData.questionsAnswered) * 100) : 0
+            });
+        }
+
+        return last7Days;
+    },
+
+    // 记录今日学习数据
+    recordDailyActivity(questionsAnswered, correctAnswers, timeSpent = 0) {
+        const stats = this.loadStatistics();
+        const today = new Date().toDateString();
+
+        if (!stats.dailyData) {
+            stats.dailyData = {};
+        }
+
+        if (!stats.dailyData[today]) {
+            stats.dailyData[today] = {
+                date: today,
+                questionsAnswered: 0,
+                correctAnswers: 0,
+                gamesPlayed: 0,
+                timeSpent: 0
+            };
+        }
+
+        // 累加今日数据
+        stats.dailyData[today].questionsAnswered += questionsAnswered;
+        stats.dailyData[today].correctAnswers += correctAnswers;
+        stats.dailyData[today].gamesPlayed += 1;
+        stats.dailyData[today].timeSpent += timeSpent;
+
+        this.saveStatistics(stats);
     }
 };

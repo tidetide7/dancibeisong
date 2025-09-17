@@ -397,6 +397,13 @@ function endLevel(success) {
         success: success
     });
 
+    // 记录今日学习数据
+    const questionsAnswered = gameState.questions.length;
+    const correctAnswers = questionsAnswered - gameState.wrongAnswers.length;
+    const timeSpentMinutes = Math.round(playTime / 1000 / 60);
+
+    StorageAPI.recordDailyActivity(questionsAnswered, correctAnswers, timeSpentMinutes);
+
     if (success) {
         // 更新进度
         StorageAPI.updateLevelProgress(gameState.currentLevel, true);
@@ -656,6 +663,44 @@ function renderStatistics() {
     document.getElementById('words-learned').textContent = stats.wordsLearned;
     document.getElementById('completed-levels').textContent = stats.completedLevels;
     document.getElementById('games-played').textContent = stats.gamesPlayed;
+
+    // 渲染学习曲线图表
+    renderLearningCurve();
+}
+
+// 渲染学习曲线图表
+function renderLearningCurve() {
+    const curveData = StorageAPI.getLearningCurveData();
+    const container = document.getElementById('learning-curve-chart');
+
+    if (!container) return;
+
+    // 找到最大值用于缩放
+    const maxQuestions = Math.max(...curveData.map(d => d.questionsAnswered), 1);
+
+    container.innerHTML = `
+        <div class="flex items-end justify-between h-full">
+            ${curveData.map(day => {
+                const height = maxQuestions > 0 ? (day.questionsAnswered / maxQuestions) * 80 : 0;
+                const color = day.questionsAnswered > 0 ? 'bg-blue-500' : 'bg-gray-200';
+
+                return `
+                    <div class="flex flex-col items-center flex-1 mx-1">
+                        <div class="mb-2">
+                            <div class="${color} rounded-t transition-all duration-300 hover:bg-blue-600"
+                                 style="height: ${height}px; width: 12px;"
+                                 title="${day.shortDate}: ${day.questionsAnswered}题, 准确率${day.accuracy}%">
+                            </div>
+                        </div>
+                        <span class="text-xs text-slate-500 text-center">${day.shortDate}</span>
+                    </div>
+                `;
+            }).join('')}
+        </div>
+        <div class="mt-3 text-xs text-slate-500 text-center">
+            📊 最近7天答题数量 (悬停查看详情)
+        </div>
+    `;
 }
 
 // 渲染成就页面
