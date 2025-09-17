@@ -15,6 +15,13 @@ let gameState = {
     settings: null
 };
 
+// 提示功能状态
+let hintState = {
+    isVisible: false,
+    currentWord: null,
+    currentExamples: []
+};
+
 // 初始化游戏
 async function initGame() {
     console.log('初始化单词勇者游戏...');
@@ -101,6 +108,9 @@ function renderMainMenu() {
 
         levelGrid.appendChild(levelButton);
     });
+
+    // 更新复习模式按钮
+    updateReviewModeButton();
 }
 
 // 开始关卡
@@ -160,8 +170,10 @@ function renderGameplay() {
     const currentQuestion = gameState.questions[gameState.currentQuestionIndex];
 
     // 更新进度
-    document.getElementById('question-progress').textContent =
-        `第 ${gameState.currentQuestionIndex + 1} / ${gameState.questions.length} 题`;
+    const progressText = gameState.isReviewMode
+        ? `📚 复习模式 第 ${gameState.currentQuestionIndex + 1} / ${gameState.questions.length} 题`
+        : `第 ${gameState.currentQuestionIndex + 1} / ${gameState.questions.length} 题`;
+    document.getElementById('question-progress').textContent = progressText;
 
     // 更新Combo
     document.getElementById('combo-count').textContent = `x${gameState.combo}`;
@@ -182,6 +194,12 @@ function renderGameplay() {
         questionWord.onclick = playQuestionAudio;
         playAudioBtn.classList.remove('hidden');
 
+        // 隐藏提示按钮（听音选词不需要提示）
+        initHintForQuestion(null);
+
+        // 隐藏难度指示器（听音选词不显示难度）
+        hideDifficultyIndicator();
+
         // 自动播放一次
         setTimeout(() => playQuestionAudio(), 500);
     } else {
@@ -191,6 +209,12 @@ function renderGameplay() {
         questionWord.className = 'text-5xl font-bold text-slate-800 question-enter';
         questionWord.onclick = null;
         playAudioBtn.classList.add('hidden');
+
+        // 初始化提示功能
+        initHintForQuestion(currentQuestion.word);
+
+        // 显示单词难度指示器
+        showDifficultyIndicator(currentQuestion);
     }
 
     // 渲染选项
@@ -405,11 +429,26 @@ function endLevel(success) {
     StorageAPI.recordDailyActivity(questionsAnswered, correctAnswers, timeSpentMinutes);
 
     if (success) {
-        // 更新进度
-        StorageAPI.updateLevelProgress(gameState.currentLevel, true);
+        if (!gameState.isReviewMode) {
+            // 普通关卡模式：更新进度
+            StorageAPI.updateLevelProgress(gameState.currentLevel, true);
 
-        // 更新关卡状态
-        LevelsAPI.completeLevel(gameState.currentLevel);
+            // 更新关卡状态
+            LevelsAPI.completeLevel(gameState.currentLevel);
+        } else {
+            // 复习模式：清除已掌握的单词
+            const masteredWords = gameState.questions
+                .filter(q => !gameState.wrongAnswers.find(wrong => wrong.word === q.word))
+                .map(q => {
+                    const wordData = VOCABULARY.find(v => v.word === q.word);
+                    return wordData ? wordData.id : null;
+                })
+                .filter(Boolean);
+
+            if (masteredWords.length > 0) {
+                StorageAPI.clearMasteredWords(masteredWords);
+            }
+        }
 
         showResultsScreen(true);
     } else {
@@ -429,14 +468,28 @@ function showResultsScreen(success) {
     if (success) {
         resultIcon.className = 'mx-auto bg-green-100 rounded-full h-20 w-20 flex items-center justify-center mb-4';
         resultIcon.innerHTML = '<svg class="w-12 h-12 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
-        resultTitle.textContent = '闯关成功！';
-        resultMessage.textContent = '太棒了，新的一关已经解锁！';
-        nextLevelBtn.style.display = gameState.currentLevel < 100 ? 'block' : 'none';
+
+        if (gameState.isReviewMode) {
+            resultTitle.textContent = '复习完成！';
+            resultMessage.textContent = '太棒了，又掌握了更多单词！';
+        } else {
+            resultTitle.textContent = '闯关成功！';
+            resultMessage.textContent = '太棒了，新的一关已经解锁！';
+        }
+
+        nextLevelBtn.style.display = (!gameState.isReviewMode && gameState.currentLevel < 100) ? 'block' : 'none';
     } else {
         resultIcon.className = 'mx-auto bg-red-100 rounded-full h-20 w-20 flex items-center justify-center mb-4';
         resultIcon.innerHTML = '<svg class="w-12 h-12 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>';
-        resultTitle.textContent = '挑战失败';
-        resultMessage.textContent = '别灰心，再试一次吧！';
+
+        if (gameState.isReviewMode) {
+            resultTitle.textContent = '复习未完成';
+            resultMessage.textContent = '继续努力，复习这些单词吧！';
+        } else {
+            resultTitle.textContent = '挑战失败';
+            resultMessage.textContent = '别灰心，再试一次吧！';
+        }
+
         nextLevelBtn.style.display = 'none';
     }
 
@@ -576,10 +629,14 @@ function updateReviewProgress() {
         `;
         confirmBtn.disabled = false;
         confirmBtn.textContent = '继续下一关';
-        // 更改按钮点击事件为直接跳转下一关
+        // 更改按钮点击事件
         confirmBtn.onclick = () => {
             confirmAllReviewed();
-            goToNextLevel();
+            if (gameState.isReviewMode) {
+                backToMainMenu();
+            } else {
+                goToNextLevel();
+            }
         };
         updateResultButtons(true);
     } else {
@@ -637,6 +694,9 @@ function showScreen(screenId) {
 
 // 返回主菜单
 function backToMainMenu() {
+    // 重置复习模式状态
+    gameState.isReviewMode = false;
+
     showScreen('screen-main-menu');
     renderMainMenu();
 }
@@ -879,6 +939,301 @@ function showScreen(screenId) {
     }
 
     gameState.currentScreen = screenId.replace('screen-', '');
+}
+
+// ================================
+// 提示功能相关函数
+// ================================
+
+// 切换提示显示状态
+function toggleHint() {
+    const btn = document.getElementById('hint-btn');
+    const area = document.getElementById('hint-area');
+
+    if (hintState.isVisible) {
+        // 隐藏提示
+        area.classList.add('hidden');
+        area.classList.remove('show');
+        btn.innerHTML = '💡 提示';
+        btn.classList.remove('active');
+        hintState.isVisible = false;
+    } else {
+        // 显示提示
+        showHintExample();
+        area.classList.remove('hidden');
+        area.classList.add('show');
+        btn.innerHTML = '🔍 隐藏提示';
+        btn.classList.add('active');
+        hintState.isVisible = true;
+    }
+}
+
+// 显示例句
+function showHintExample() {
+    const area = document.getElementById('hint-area');
+    const examples = hintState.currentExamples;
+
+    if (examples && examples.length > 0) {
+        // 随机选择一个例句
+        const randomExample = examples[Math.floor(Math.random() * examples.length)];
+
+        area.innerHTML = `
+            <div class="example-sentence">
+                ${randomExample}
+            </div>
+        `;
+    } else {
+        // 没有例句时显示默认提示
+        area.innerHTML = `
+            <div class="example-sentence">
+                Sorry, no example available for this word.
+            </div>
+        `;
+    }
+}
+
+// 初始化提示数据
+function initHintForQuestion(word) {
+    const hintBtn = document.getElementById('hint-btn');
+
+    if (!word) {
+        // 听音选词题型，隐藏提示按钮
+        hintBtn.classList.add('hidden');
+        resetHintState();
+        return;
+    }
+
+    // 看词选意题型，显示提示按钮
+    hintBtn.classList.remove('hidden');
+
+    // 查找单词数据
+    const wordData = VOCABULARY.find(v => v.word === word);
+    hintState.currentWord = word;
+    hintState.currentExamples = wordData && wordData.examples ? wordData.examples : [];
+
+    // 重置提示状态
+    resetHintState();
+}
+
+// 重置提示状态
+function resetHintState() {
+    const btn = document.getElementById('hint-btn');
+    const area = document.getElementById('hint-area');
+
+    area.classList.add('hidden');
+    area.classList.remove('show');
+    btn.innerHTML = '💡 提示';
+    btn.classList.remove('active');
+    hintState.isVisible = false;
+}
+
+// ================================
+// 复习模式相关函数
+// ================================
+
+// 更新复习模式按钮
+function updateReviewModeButton() {
+    const reviewBtn = document.getElementById('review-mode-btn');
+    const reviewCount = document.getElementById('review-count');
+
+    if (!reviewBtn || !reviewCount) return;
+
+    const wordsNeedReview = StorageAPI.getWordsNeedReview();
+    const count = wordsNeedReview.length;
+
+    reviewCount.textContent = count;
+
+    if (count === 0) {
+        reviewBtn.disabled = true;
+        reviewBtn.textContent = '📚 复习模式 (没有需要复习的单词)';
+        reviewBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    } else {
+        reviewBtn.disabled = false;
+        reviewBtn.innerHTML = `📚 复习模式 (需要复习的单词: <span id="review-count">${count}</span>个)`;
+        reviewBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
+}
+
+// 开始复习模式
+async function startReviewMode() {
+    console.log('开始复习模式');
+
+    const wordsNeedReview = StorageAPI.getWordsNeedReview();
+
+    if (wordsNeedReview.length === 0) {
+        alert('恭喜！目前没有需要复习的单词。');
+        return;
+    }
+
+    // 显示加载指示器
+    if (window.loadingIndicator) {
+        window.loadingIndicator.show();
+    }
+
+    try {
+        // 初始化复习模式游戏状态
+        gameState.currentLevel = 'review';
+        gameState.currentQuestionIndex = 0;
+        gameState.lives = 3;
+        gameState.combo = 0;
+        gameState.score = 0;
+        gameState.wrongAnswers = [];
+        gameState.startTime = Date.now();
+        gameState.isReviewMode = true;
+
+        // 生成复习题目
+        gameState.questions = generateReviewQuestions(wordsNeedReview, Math.min(10, wordsNeedReview.length));
+
+        if (gameState.questions.length === 0) {
+            alert('复习数据加载失败！');
+            return;
+        }
+
+        // 预加载这些单词的语音
+        const words = gameState.questions.map(q => q.word);
+        if (window.audioManager && audioManager.loadVoicesLazily) {
+            await audioManager.loadVoicesLazily(words);
+        }
+
+        // 切换到游戏界面
+        showScreen('screen-gameplay');
+        renderGameplay();
+
+    } catch (error) {
+        console.error('复习模式加载失败:', error);
+        alert('复习模式加载失败，请重试！');
+    } finally {
+        // 隐藏加载指示器
+        if (window.loadingIndicator) {
+            window.loadingIndicator.hide();
+        }
+    }
+}
+
+// 生成复习题目
+function generateReviewQuestions(wordIds, count) {
+    const questions = [];
+    const selectedWordIds = wordIds.slice(0, count);
+
+    selectedWordIds.forEach(wordId => {
+        const wordData = VocabularyAPI.getWordById(wordId);
+        if (!wordData) return;
+
+        // 随机选择题型（看词选意或听音选词）
+        const isListeningQuestion = Math.random() < 0.5;
+
+        let question;
+        if (isListeningQuestion) {
+            // 听音选词：播放发音，选择正确的英文单词
+            const wrongWords = VocabularyAPI.getRandomWords(3).filter(w => w.id !== wordData.id);
+            const allOptions = [wordData.word, ...wrongWords.map(w => w.word)];
+            const shuffledOptions = allOptions.sort(() => 0.5 - Math.random());
+
+            question = {
+                id: Math.random().toString(36).substr(2, 9),
+                type: 'listening',
+                word: wordData.word,
+                pronunciation: wordData.pronunciation,
+                meaning: wordData.meaning,
+                correctAnswer: wordData.word,
+                options: shuffledOptions,
+                correctIndex: shuffledOptions.indexOf(wordData.word)
+            };
+        } else {
+            // 看词选意：显示英文单词，选择正确的中文意思
+            const wrongOptions = VocabularyAPI.getRandomWrongOptions(wordData, 3);
+            const allOptions = [wordData.meaning, ...wrongOptions];
+            const shuffledOptions = allOptions.sort(() => 0.5 - Math.random());
+
+            question = {
+                id: Math.random().toString(36).substr(2, 9),
+                type: 'reading',
+                word: wordData.word,
+                pronunciation: wordData.pronunciation,
+                meaning: wordData.meaning,
+                correctAnswer: wordData.meaning,
+                options: shuffledOptions,
+                correctIndex: shuffledOptions.indexOf(wordData.meaning)
+            };
+        }
+
+        if (question) {
+            questions.push(question);
+        }
+    });
+
+    // 打乱题目顺序
+    return questions.sort(() => Math.random() - 0.5);
+}
+
+// ================================
+// 单词难度指示器相关函数
+// ================================
+
+// 显示单词难度指示器
+function showDifficultyIndicator(question) {
+    const indicator = document.getElementById('difficulty-indicator');
+    const badge = document.getElementById('difficulty-badge');
+
+    if (!question || !question.word) {
+        hideDifficultyIndicator();
+        return;
+    }
+
+    // 查找单词数据获取ID
+    const wordData = VOCABULARY.find(v => v.word === question.word);
+    if (!wordData) {
+        hideDifficultyIndicator();
+        return;
+    }
+
+    // 获取单词难度信息
+    const difficultyInfo = StorageAPI.getWordDifficulty(wordData.id);
+
+    // 设置难度标签
+    let difficultyText = '';
+    let difficultyClass = 'difficulty-unknown';
+
+    switch (difficultyInfo.difficulty) {
+        case 'easy':
+            difficultyText = '简单';
+            difficultyClass = 'difficulty-easy';
+            break;
+        case 'medium':
+            difficultyText = '中等';
+            difficultyClass = 'difficulty-medium';
+            break;
+        case 'hard':
+            difficultyText = '困难';
+            difficultyClass = 'difficulty-hard';
+            break;
+        default:
+            // 如果没有足够的数据，不显示指示器
+            if (difficultyInfo.totalAttempts === 0) {
+                hideDifficultyIndicator();
+                return;
+            }
+            difficultyText = '？';
+            difficultyClass = 'difficulty-unknown';
+    }
+
+    // 更新显示
+    badge.textContent = difficultyText;
+    badge.className = `px-2 py-1 text-xs font-bold rounded-full ${difficultyClass}`;
+    indicator.classList.remove('hidden');
+
+    // 添加工具提示信息
+    const attempts = difficultyInfo.totalAttempts;
+    const correct = difficultyInfo.correctAttempts;
+    const accuracy = attempts > 0 ? Math.round((correct / attempts) * 100) : 0;
+
+    badge.title = `历史正确率: ${accuracy}% (${correct}/${attempts})`;
+}
+
+// 隐藏单词难度指示器
+function hideDifficultyIndicator() {
+    const indicator = document.getElementById('difficulty-indicator');
+    indicator.classList.add('hidden');
 }
 
 // 页面加载完成后初始化游戏

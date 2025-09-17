@@ -19,6 +19,13 @@
                 <!-- 关卡网格将由 JavaScript 动态生成 -->
             </main>
 
+            <!-- 复习模式按钮 -->
+            <div class="flex justify-center mt-4">
+                <button onclick="startReviewMode()" id="review-mode-btn" class="review-mode-btn bg-gradient-to-r from-orange-500 to-red-500 text-white px-6 py-3 rounded-lg text-sm hover:from-orange-600 hover:to-red-600 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed">
+                    📚 复习模式 (需要复习的单词: <span id="review-count">0</span>个)
+                </button>
+            </div>
+
             <!-- 底部导航按钮 -->
             <div class="flex justify-center space-x-4 mt-6">
                 <button onclick="showScreen('screen-statistics')" class="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-600 transition-all">
@@ -50,7 +57,26 @@
 
                 <div class="text-center my-10">
                     <div id="question-type-indicator" class="text-sm text-slate-500 mb-2">看词选意</div>
-                    <h2 id="question-word" class="text-5xl font-bold text-slate-800">loading...</h2>
+                    <div class="relative inline-block">
+                        <h2 id="question-word" class="text-5xl font-bold text-slate-800">loading...</h2>
+                        <!-- 单词难度指示器 -->
+                        <div id="difficulty-indicator" class="absolute -top-2 -right-2 hidden">
+                            <span id="difficulty-badge" class="px-2 py-1 text-xs font-bold rounded-full"></span>
+                        </div>
+                    </div>
+
+                    <!-- 提示按钮 -->
+                    <button id="hint-btn" class="hint-button mt-3 hidden" onclick="toggleHint()">
+                        💡 提示
+                    </button>
+
+                    <!-- 例句显示区域 -->
+                    <div id="hint-area" class="hint-area hidden mt-4">
+                        <div class="example-sentence">
+                            <!-- 例句内容由JS动态填充 -->
+                        </div>
+                    </div>
+
                     <button id="play-audio-btn" class="mt-4 bg-blue-500 text-white px-6 py-2 rounded-lg hidden" onclick="playQuestionAudio()">
                         🔊 播放发音
                     </button>

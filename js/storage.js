@@ -217,6 +217,138 @@ const StorageAPI = {
         // 更新准确率
         stats.averageAccuracy = Math.round((stats.correctAnswers / stats.totalQuestionsAnswered) * 100);
 
+        // 记录单词难度数据
+        if (word) {
+            this.recordWordDifficulty(word.id, isCorrect);
+        }
+
+        return this.saveStatistics(stats);
+    },
+
+    // 记录单词难度数据
+    recordWordDifficulty: function(wordId, isCorrect) {
+        const stats = this.loadStatistics();
+
+        // 初始化单词难度统计
+        if (!stats.wordDifficulty) {
+            stats.wordDifficulty = {};
+        }
+
+        if (!stats.wordDifficulty[wordId]) {
+            stats.wordDifficulty[wordId] = {
+                totalAttempts: 0,
+                correctAttempts: 0,
+                difficulty: 'unknown'
+            };
+        }
+
+        const wordStats = stats.wordDifficulty[wordId];
+        wordStats.totalAttempts++;
+
+        if (isCorrect) {
+            wordStats.correctAttempts++;
+        }
+
+        // 计算准确率并确定难度等级
+        const accuracy = wordStats.correctAttempts / wordStats.totalAttempts;
+
+        if (wordStats.totalAttempts >= 3) {
+            if (accuracy >= 0.8) {
+                wordStats.difficulty = 'easy';
+            } else if (accuracy >= 0.5) {
+                wordStats.difficulty = 'medium';
+            } else {
+                wordStats.difficulty = 'hard';
+            }
+        } else {
+            wordStats.difficulty = 'unknown';
+        }
+
+        return this.saveStatistics(stats);
+    },
+
+    // 获取单词难度
+    getWordDifficulty: function(wordId) {
+        const stats = this.loadStatistics();
+
+        if (!stats.wordDifficulty || !stats.wordDifficulty[wordId]) {
+            return {
+                difficulty: 'unknown',
+                totalAttempts: 0,
+                correctAttempts: 0
+            };
+        }
+
+        return stats.wordDifficulty[wordId];
+    },
+
+    // 获取难词列表（用户经常答错的单词）
+    getHardWords: function() {
+        const stats = this.loadStatistics();
+
+        if (!stats.wordDifficulty) {
+            return [];
+        }
+
+        const hardWords = [];
+        Object.keys(stats.wordDifficulty).forEach(wordId => {
+            const wordStats = stats.wordDifficulty[wordId];
+            if (wordStats.difficulty === 'hard' && wordStats.totalAttempts >= 3) {
+                hardWords.push({
+                    wordId: parseInt(wordId),
+                    ...wordStats
+                });
+            }
+        });
+
+        return hardWords;
+    },
+
+    // 获取需要复习的单词列表
+    getWordsNeedReview: function() {
+        const stats = this.loadStatistics();
+        const hardWords = this.getHardWords();
+        const manualReviewWords = stats.wordsNeedReview || [];
+
+        // 合并难词和手动标记需要复习的单词
+        const reviewWords = new Set();
+
+        // 添加难词
+        hardWords.forEach(word => {
+            reviewWords.add(word.wordId);
+        });
+
+        // 添加手动标记的单词
+        manualReviewWords.forEach(wordId => {
+            if (typeof wordId === 'string') {
+                // 如果是单词字符串，需要找到对应的ID
+                const wordData = VOCABULARY.find(v => v.word === wordId);
+                if (wordData) {
+                    reviewWords.add(wordData.id);
+                }
+            } else {
+                reviewWords.add(wordId);
+            }
+        });
+
+        return Array.from(reviewWords);
+    },
+
+    // 清除已掌握的复习单词
+    clearMasteredWords: function(wordIds) {
+        const stats = this.loadStatistics();
+
+        if (stats.wordsNeedReview) {
+            stats.wordsNeedReview = stats.wordsNeedReview.filter(word => {
+                if (typeof word === 'string') {
+                    const wordData = VOCABULARY.find(v => v.word === word);
+                    return wordData ? !wordIds.includes(wordData.id) : true;
+                } else {
+                    return !wordIds.includes(word);
+                }
+            });
+        }
+
         return this.saveStatistics(stats);
     },
 
